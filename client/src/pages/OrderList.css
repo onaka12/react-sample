@@ -1,0 +1,47 @@
+.modern-table-card {
+  border-radius: 12px;
+  box-shadow: 0 2px 8px 0 rgba(0,0,0,0.06);
+  overflow: hidden;
+  margin: 32px;
+  background: #fff;
+  border: 1px solid #ececec;
+}
+
+.modern-table .ant-table-container {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: none;
+}
+
+.modern-table .ant-table-thead > tr > th {
+  background: #f6f8fa;
+  color: #222;
+  font-weight: 600;
+  border-bottom: 1.5px solid #e6e6e6;
+  font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, 'Meiryo', sans-serif;
+  font-size: 1em;
+  letter-spacing: 0.01em;
+}
+
+.modern-table-row-even {
+  background: #fafbfc;
+}
+
+.modern-table-row-odd {
+  background: #fff;
+}
+
+.modern-table .ant-table-row:hover > td {
+  background: #f0f4fa !important;
+  transition: background 0.2s;
+}
+
+.modern-table .ant-table-row-selected > td {
+  background: #e3f2fd !important;
+}
+
+.modern-table .ant-table {
+  border-radius: 8px;
+  font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, 'Meiryo', sans-serif;
+  font-size: 1em;
+} 
