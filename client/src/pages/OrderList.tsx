@@ -714,7 +714,7 @@ const OrderList: React.FC = () => {
 
   const handleEdit = (item: OrderItem) => {
     setEditingItem(item);
-    form.setFieldsValue({ ...item, date: dayjs(item.date) });
+    form.setFieldsValue({ ...item, orderDate: dayjs(item.orderDate) });
     setIsModalOpen(true);
   };
 
@@ -927,9 +927,28 @@ const OrderList: React.FC = () => {
   };
 
   const columns = [
-    { title: '取引番号', dataIndex: 'transactionId', key: 'transactionId', onCell: () => ({ style: { minWidth: 108 } }) },
-    { title: '注文年月日', dataIndex: 'orderDate', key: 'orderDate', onCell: () => ({ style: { minWidth: 126 } }) },
-    { title: '注文合計金額', dataIndex: 'totalAmount', key: 'totalAmount', render: (v: number) => v.toLocaleString(), onCell: () => ({ style: { minWidth: 144 } }) },
+    {
+      title: '取引番号',
+      dataIndex: 'transactionId',
+      key: 'transactionId',
+      sorter: (a: OrderItem, b: OrderItem) => a.transactionId.localeCompare(b.transactionId),
+      onCell: () => ({ style: { minWidth: 108 } })
+    },
+    {
+      title: '注文年月日',
+      dataIndex: 'orderDate',
+      key: 'orderDate',
+      sorter: (a: OrderItem, b: OrderItem) => a.orderDate.localeCompare(b.orderDate),
+      onCell: () => ({ style: { minWidth: 126 } })
+    },
+    {
+      title: '注文合計金額',
+      dataIndex: 'totalAmount',
+      key: 'totalAmount',
+      sorter: (a: OrderItem, b: OrderItem) => a.totalAmount - b.totalAmount,
+      render: (v: number) => v.toLocaleString(),
+      onCell: () => ({ style: { minWidth: 144 } })
+    },
     { title: 'ステータス', dataIndex: 'status', key: 'status', onCell: () => ({ style: { minWidth: 90 } }), render: (status: string) => (
       <Tag color={status === '応諾済み' ? 'green' : 'default'}>{status}</Tag>
     ) },
@@ -988,6 +1007,7 @@ const OrderList: React.FC = () => {
 
   return (
     <Card style={{ borderRadius: 12, boxShadow: '0 2px 8px #f0f1f2', margin: 24, background: '#fff' }}>
+      {/* 画面タイトル */}
       <Title level={4} style={{ marginBottom: 24 }}>注文一覧</Title>
       {/* 検索パネル */}
       <Card style={{ marginBottom: 16, borderRadius: 8, boxShadow: '0 1px 4px #e0e0e0', background: '#fafbfc' }} bodyStyle={{ padding: 16 }}>

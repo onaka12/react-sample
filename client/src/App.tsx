@@ -9,6 +9,8 @@ import {
 import 'antd/dist/reset.css';
 import InventoryList from './pages/InventoryList';
 import OrderList from './pages/OrderList';
+import InventoryDetail from './pages/InventoryDetail';
+import InventoryDetailList from './pages/InventoryDetailList';
 
 const { Header, Sider, Content } = Layout;
 const { Title } = Typography;
@@ -28,6 +30,7 @@ const AppLayout: React.FC = () => {
   const selectedMenu =
     location.pathname.startsWith('/order') ? 'orders'
     : location.pathname.startsWith('/settings') ? 'settings'
+    : location.pathname.startsWith('/inventory-detail') ? 'inventory-detail'
     : 'inventory';
 
   return (
@@ -51,6 +54,7 @@ const AppLayout: React.FC = () => {
           onClick={({ key }) => {
             if (key === 'orders') navigate('/order');
             else if (key === 'inventory') navigate('/inventory');
+            else if (key === 'inventory-detail') navigate('/inventory-detail');
             else if (key === 'settings') navigate('/settings');
           }}
         >
@@ -59,6 +63,9 @@ const AppLayout: React.FC = () => {
           </Menu.Item>
           <Menu.Item key="inventory" icon={<UnorderedListOutlined />}>
             発注一覧
+          </Menu.Item>
+          <Menu.Item key="inventory-detail" icon={<UnorderedListOutlined />}>
+            発注詳細
           </Menu.Item>
           <Menu.Item key="settings" icon={<SettingOutlined />}>
             設定
@@ -73,6 +80,8 @@ const AppLayout: React.FC = () => {
           <div style={{ padding: 24, background: '#fff', borderRadius: 8, minHeight: 360 }}>
             <Routes>
               <Route path="/inventory" element={<InventoryList />} />
+              <Route path="/inventory/:id" element={<InventoryDetail />} />
+              <Route path="/inventory-detail" element={<InventoryDetailList />} />
               <Route path="/order" element={<OrderList />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/" element={<Navigate to="/order" replace />} />
