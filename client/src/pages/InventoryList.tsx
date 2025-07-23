@@ -1,23 +1,23 @@
 import React, { useState } from 'react';
-import { Table, Typography, Button, Modal, Form, Input, InputNumber, Space, Dropdown, Menu, Tooltip, Card, Descriptions, Row, Col, Divider } from 'antd';
-import { EllipsisOutlined } from '@ant-design/icons';
-import './InventoryList.css';
+import { Table, Typography, Button, Popconfirm, Modal, Form, Input, InputNumber, Space, Card, Tag, Descriptions, DatePicker, Select } from 'antd';
+import { SearchOutlined, EditOutlined, EyeOutlined, DeleteOutlined } from '@ant-design/icons';
+import dayjs from 'dayjs';
 
 const { Title } = Typography;
-const { Search } = Input;
 
 interface InventoryItem {
   key: number;
+  orderId: string;
   name: string;
-  stock: number;
-  price: number;
+  quantity: number;
+  date: string;
+  status: '進行中' | '完了' | '未着手';
 }
 
 const initialData: InventoryItem[] = [
-  { key: 1, name: '商品A', stock: 120, price: 1500 },
-  { key: 2, name: '商品B', stock: 80, price: 2300 },
-  { key: 3, name: '商品C', stock: 45, price: 3200 },
-  { key: 4, name: '商品D', stock: 200, price: 500 },
+  { key: 1, orderId: 'PUR-001', name: '発注A', quantity: 120, date: '2024-06-01', status: '進行中' },
+  { key: 2, orderId: 'PUR-002', name: '発注B', quantity: 80, date: '2024-06-02', status: '完了' },
+  { key: 3, orderId: 'PUR-003', name: '発注C', quantity: 45, date: '2024-05-15', status: '未着手' },
 ];
 
 const InventoryList: React.FC = () => {
@@ -27,12 +27,15 @@ const InventoryList: React.FC = () => {
   const [form] = Form.useForm();
   const [viewItem, setViewItem] = useState<InventoryItem | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [searchText, setSearchText] = useState('');
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
-  // Remove filters state and use only AntD's built-in filter logic
+  // 検索条件のstate
+  const [searchText, setSearchText] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [monthFilter, setMonthFilter] = useState('');
+  const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null]>([null, null]);
 
   const handleDelete = (key: number) => {
-    setData(data.filter(item => item.key !== key));
+    setData(prev => prev.filter(item => item.key !== key));
   };
 
   const handleEdit = (item: InventoryItem) => {
@@ -59,266 +62,207 @@ const InventoryList: React.FC = () => {
     });
   };
 
-  const handleView = (item: InventoryItem) => {
-    setViewItem(item);
+  // 検索条件でフィルタ
+  const filteredData = data.filter(item => {
+    // フリーワード（発注名・発注ID）
+    if (searchText) {
+      const text = searchText.toLowerCase();
+      if (!(item.name.toLowerCase().includes(text) || item.orderId.toLowerCase().includes(text))) return false;
+    }
+    // ステータス
+    if (statusFilter && item.status !== statusFilter) return false;
+    // 月フィルタ
+    if (monthFilter) {
+      const now = new Date();
+      const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      if (!item.date.startsWith(ym)) return false;
+    }
+    // 日付範囲
+    if (dateRange[0] && dayjs(item.date).isBefore(dateRange[0], 'day')) return false;
+    if (dateRange[1] && dayjs(item.date).isAfter(dateRange[1], 'day')) return false;
+    return true;
+  });
+
+  const handleView = (record: InventoryItem) => {
+    setViewItem(record);
     setIsViewModalOpen(true);
   };
 
-  const menu = (record: InventoryItem) => (
-    <Menu>
-      <Menu.Item key="view" onClick={() => handleView(record)}>
-        参照
-      </Menu.Item>
-      <Menu.Item key="edit" onClick={() => handleEdit(record)}>
-        編集
-      </Menu.Item>
-      <Menu.Item key="delete" onClick={() => handleDelete(record.key)} danger>
-        削除
-      </Menu.Item>
-    </Menu>
-  );
-
-  // Remove filters state and use only AntD's built-in filter logic
-  const filteredData = data.filter(item => item.name.includes(searchText));
-
-  const rowSelection = {
-    selectedRowKeys,
-    onChange: (selectedKeys: React.Key[]) => setSelectedRowKeys(selectedKeys),
+  const statusColor = (status: string) => {
+    if (status === '進行中') return 'blue';
+    if (status === '完了') return 'green';
+    if (status === '未着手') return 'default';
+    return 'default';
   };
-
-  const getColumnSearchProps = (dataIndex: keyof InventoryItem, label: string) => ({
-    filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }: any) => (
-      <div style={{ padding: 8 }}>
-        <Input
-          placeholder={`${label}でフィルタ`}
-          value={selectedKeys[0]}
-          onChange={e => setSelectedKeys(e.target.value ? [e.target.value] : [])}
-          onPressEnter={() => confirm()}
-          style={{ marginBottom: 8, display: 'block' }}
-        />
-        <Space>
-          <Button
-            type="primary"
-            onClick={() => confirm()}
-            size="small"
-            style={{ width: 90 }}
-          >
-            フィルタ
-          </Button>
-          <Button onClick={() => clearFilters && clearFilters()} size="small" style={{ width: 90 }}>
-            リセット
-          </Button>
-        </Space>
-      </div>
-    ),
-    filterIcon: (filtered: boolean) => <span style={{ color: filtered ? '#1677ff' : undefined }}>🔍</span>,
-    onFilter: (value: string | number | boolean, record: InventoryItem) => {
-      return record[dataIndex].toString().includes(value as string);
-    },
-  });
-
-  const getNumberRangeFilterProps = (dataIndex: keyof InventoryItem, label: string) => ({
-    filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }: any) => (
-      <div style={{ padding: 8 }}>
-        <InputNumber
-          placeholder="最小値"
-          value={selectedKeys[0]}
-          onChange={val => setSelectedKeys([val, selectedKeys[1]])}
-          style={{ width: 90, marginBottom: 8 }}
-        />
-        <InputNumber
-          placeholder="最大値"
-          value={selectedKeys[1]}
-          onChange={val => setSelectedKeys([selectedKeys[0], val])}
-          style={{ width: 90, marginBottom: 8, marginLeft: 8 }}
-        />
-        <Space>
-          <Button
-            type="primary"
-            onClick={() => confirm()}
-            size="small"
-            style={{ width: 90 }}
-          >
-            フィルタ
-          </Button>
-          <Button onClick={() => clearFilters && clearFilters()} size="small" style={{ width: 90 }}>
-            リセット
-          </Button>
-        </Space>
-      </div>
-    ),
-    filterIcon: (filtered: boolean) => <span style={{ color: filtered ? '#1677ff' : undefined }}>🔢</span>,
-    onFilter: (value: string | number | boolean, record: InventoryItem) => {
-      const [min, max] = Array.isArray(value) ? value : [undefined, undefined];
-      const v = record[dataIndex] as number;
-      const minVal = min === undefined ? -Infinity : Number(min);
-      const maxVal = max === undefined ? Infinity : Number(max);
-      return v >= minVal && v <= maxVal;
-    },
-  });
-
-  const getNumberFilterProps = (dataIndex: keyof InventoryItem, label: string) => ({
-    filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }: any) => (
-      <div style={{ padding: 8 }}>
-        <InputNumber
-          placeholder={`${label}でフィルタ`}
-          value={selectedKeys[0]}
-          onChange={val => setSelectedKeys(val !== undefined ? [val] : [])}
-          style={{ width: 120, marginBottom: 8 }}
-        />
-        <Space>
-          <Button
-            type="primary"
-            onClick={() => confirm()}
-            size="small"
-            style={{ width: 90 }}
-          >
-            フィルタ
-          </Button>
-          <Button onClick={() => clearFilters && clearFilters()} size="small" style={{ width: 90 }}>
-            リセット
-          </Button>
-        </Space>
-      </div>
-    ),
-    filterIcon: (filtered: boolean) => <span style={{ color: filtered ? '#1677ff' : undefined }}>🔢</span>,
-    onFilter: (value: string | number | boolean, record: InventoryItem) => {
-      return record[dataIndex] === value;
-    },
-  });
-
   const columns = [
     {
-      title: 'ID',
-      dataIndex: 'key',
-      key: 'key',
-      width: 80,
-      ...getNumberFilterProps('key', 'ID'),
-      sorter: (a: InventoryItem, b: InventoryItem) => a.key - b.key,
+      title: 'ステータス',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status: string) => <Tag color={statusColor(status)}>{status}</Tag>,
+      width: 100,
     },
     {
-      title: '商品名',
+      title: '発注ID',
+      dataIndex: 'orderId',
+      key: 'orderId',
+      sorter: (a: InventoryItem, b: InventoryItem) => {
+        const numA = Number(a.orderId.replace(/\D/g, ''));
+        const numB = Number(b.orderId.replace(/\D/g, ''));
+        return numA - numB;
+      },
+      width: 120,
+    },
+    {
+      title: '発注名',
       dataIndex: 'name',
       key: 'name',
-      ...getColumnSearchProps('name', '商品名'),
+      width: 120,
     },
     {
-      title: '在庫数',
-      dataIndex: 'stock',
-      key: 'stock',
-      ...getNumberRangeFilterProps('stock', '在庫数'),
-      sorter: (a: InventoryItem, b: InventoryItem) => a.stock - b.stock,
+      title: '数量',
+      dataIndex: 'quantity',
+      key: 'quantity',
+      sorter: (a: InventoryItem, b: InventoryItem) => a.quantity - b.quantity,
+      width: 80,
     },
     {
-      title: '価格 (円)',
-      dataIndex: 'price',
-      key: 'price',
-      render: (value: number) => value.toLocaleString(),
-      ...getNumberRangeFilterProps('price', '価格'),
-      sorter: (a: InventoryItem, b: InventoryItem) => a.price - b.price,
+      title: '発注日',
+      dataIndex: 'date',
+      key: 'date',
+      sorter: (a: InventoryItem, b: InventoryItem) => a.date.localeCompare(b.date),
+      width: 120,
     },
     {
-      title: '',
+      title: '操作',
       key: 'more',
-      width: 48,
+      width: 160,
       render: (_: any, record: InventoryItem) => (
-        <Tooltip title="操作メニュー">
-          <Dropdown overlay={menu(record)} trigger={["click"]} placement="bottomRight">
-            <Button type="text" icon={<EllipsisOutlined />} />
-          </Dropdown>
-        </Tooltip>
+        <Space>
+          <Button icon={<EyeOutlined />} size="small" onClick={() => handleView(record)}>
+            詳細
+          </Button>
+          <Button icon={<EditOutlined />} size="small" onClick={() => handleEdit(record)}>
+            編集
+          </Button>
+          <Popconfirm title="本当に削除しますか？" onConfirm={() => handleDelete(record.key)} okText="はい" cancelText="いいえ">
+            <Button icon={<DeleteOutlined />} size="small" danger>
+              削除
+            </Button>
+          </Popconfirm>
+        </Space>
       ),
     },
   ];
 
+  const renderViewModal = () => (
+    <Modal
+      title="発注詳細"
+      open={isViewModalOpen}
+      onCancel={() => setIsViewModalOpen(false)}
+      footer={null}
+      width={400}
+    >
+      {viewItem && (
+        <Descriptions column={1} bordered size="middle" labelStyle={{ color: '#888', fontWeight: 500, width: 120 }} contentStyle={{ fontWeight: 600, background: '#f6f8fa' }}>
+          <Descriptions.Item label="発注ID">{viewItem.orderId}</Descriptions.Item>
+          <Descriptions.Item label="発注名">{viewItem.name}</Descriptions.Item>
+          <Descriptions.Item label="数量">{viewItem.quantity}</Descriptions.Item>
+          <Descriptions.Item label="発注日">{viewItem.date}</Descriptions.Item>
+          <Descriptions.Item label="ステータス">{viewItem.status}</Descriptions.Item>
+        </Descriptions>
+      )}
+    </Modal>
+  );
+
   return (
-    <Card className="modern-table-card" bodyStyle={{ padding: 0, borderRadius: 12 }}>
-      <div style={{ padding: '24px 24px 0 24px' }}>
-        <Title level={4} style={{ marginBottom: 24 }}>在庫一覧</Title>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-          <Button type="primary" onClick={handleAdd}>
-            登録
+    <>
+      <Title level={4} style={{ marginBottom: 24 }}>発注一覧</Title>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center' }}>
+        <Button type="primary" style={{ marginBottom: 16 }} onClick={handleAdd}>
+          登録
+        </Button>
+        <Card style={{ marginBottom: 16, borderRadius: 8, boxShadow: '0 1px 4px #e0e0e0', background: '#fafbfc' }} bodyStyle={{ padding: 16 }}>
+          <Space wrap align="center">
+            <Input
+              placeholder="フリーワード"
+              allowClear
+              prefix={<SearchOutlined />}
+              style={{ width: 180 }}
+              value={searchText}
+              onChange={e => setSearchText(e.target.value)}
+            />
+            <Select
+              placeholder="ステータス"
+              style={{ width: 120 }}
+              value={statusFilter || undefined}
+              onChange={v => setStatusFilter(v)}
+              allowClear
+              options={['進行中', '完了', '未着手'].map(s => ({ value: s, label: s }))}
+            />
+            <Button type={monthFilter === '今月' ? 'primary' : 'default'} onClick={() => setMonthFilter('今月')}>今月</Button>
+            <Button type={monthFilter === '先月' ? 'primary' : 'default'} onClick={() => setMonthFilter('先月')}>先月</Button>
+            <DatePicker.RangePicker
+              value={dateRange}
+              onChange={range => setDateRange(range as [dayjs.Dayjs | null, dayjs.Dayjs | null])}
+              style={{ width: 260 }}
+              allowClear
+            />
+            <Button onClick={() => { setStatusFilter(''); setMonthFilter(''); setSearchText(''); setDateRange([null, null]); }}>条件クリア</Button>
+          </Space>
+        </Card>
+        {selectedRowKeys.length > 0 && (
+          <Button type="primary" style={{ marginBottom: 12 }} onClick={() => {
+            Modal.confirm({
+              title: `選択した${selectedRowKeys.length}件を応諾しますか？`,
+              okText: 'はい',
+              cancelText: 'いいえ',
+              onOk: () => {
+                setData(prev => prev.map(item => selectedRowKeys.includes(item.key) ? { ...item, status: '完了' } : item));
+                setSelectedRowKeys([]);
+              },
+            });
+          }}>
+            選択した{selectedRowKeys.length}件を応諾
           </Button>
-          <Search
-            placeholder="商品名で検索"
-            allowClear
-            onChange={e => setSearchText(e.target.value)}
-            style={{ width: 240 }}
-          />
-          {selectedRowKeys.length > 0 && (
-            <span style={{ marginLeft: 8, color: '#1677ff', fontWeight: 500 }}>
-              {selectedRowKeys.length}件選択中
-            </span>
-          )}
-        </div>
+        )}
       </div>
       <Table
-        className="modern-table"
         columns={columns}
         dataSource={filteredData}
-        pagination={false}
+        pagination={{ position: ['bottomCenter'], pageSize: 10, showSizeChanger: true, pageSizeOptions: [10, 20, 50] }}
         rowKey="key"
         bordered
         size="middle"
         rowClassName={(_, idx) => idx % 2 === 0 ? 'modern-table-row-even' : 'modern-table-row-odd'}
-        style={{ borderRadius: 12, margin: 24 }}
+        style={{ borderRadius: 12, marginTop: 8 }}
         scroll={{ x: true }}
-        rowSelection={rowSelection}
+        rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
+        sticky
+        components={{
+          header: {
+            cell: (props: any) => <th {...props} style={{ ...props.style, background: '#f5f6fa', fontWeight: 700, fontSize: 15 }} />,
+          },
+        }}
       />
       <Modal
-        title={editingItem ? '在庫編集' : '在庫登録'}
+        title={editingItem ? '発注編集' : '発注登録'}
         open={isModalOpen}
         onOk={handleModalOk}
         onCancel={() => setIsModalOpen(false)}
         okText="保存"
         cancelText="キャンセル"
-        width={editingItem ? 600 : 400}
-        bodyStyle={{ padding: editingItem ? 0 : undefined }}
       >
-        {editingItem ? (
-          <Row gutter={0} style={{ minHeight: 220 }}>
-            <Col xs={24} md={11} style={{ background: '#f6f8fa', borderRight: '1px solid #f0f0f0', padding: 20, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-              <div style={{ fontWeight: 600, marginBottom: 12, color: '#555' }}>現在の値</div>
-              <Descriptions column={1} size="small" labelStyle={{ color: '#888', fontWeight: 500 }} contentStyle={{ fontWeight: 600 }}>
-                <Descriptions.Item label="商品名">{editingItem.name}</Descriptions.Item>
-                <Descriptions.Item label="在庫数">{editingItem.stock}</Descriptions.Item>
-                <Descriptions.Item label="価格 (円)">{editingItem.price.toLocaleString()}</Descriptions.Item>
-              </Descriptions>
-            </Col>
-            <Col xs={24} md={13} style={{ padding: 24 }}>
-              <div style={{ fontWeight: 600, marginBottom: 12, color: '#555' }}>新しい値</div>
-              <Form form={form} layout="vertical">
-                <Form.Item name="name" label="商品名" rules={[{ required: true, message: '商品名を入力してください' }]}> <Input /> </Form.Item>
-                <Form.Item name="stock" label="在庫数" rules={[{ required: true, message: '在庫数を入力してください' }]}> <InputNumber min={0} style={{ width: '100%' }} /> </Form.Item>
-                <Form.Item name="price" label="価格 (円)" rules={[{ required: true, message: '価格を入力してください' }]}> <InputNumber min={0} style={{ width: '100%' }} /> </Form.Item>
-              </Form>
-            </Col>
-          </Row>
-        ) : (
-          <Form form={form} layout="vertical">
-            <Form.Item name="name" label="商品名" rules={[{ required: true, message: '商品名を入力してください' }]}> <Input /> </Form.Item>
-            <Form.Item name="stock" label="在庫数" rules={[{ required: true, message: '在庫数を入力してください' }]}> <InputNumber min={0} style={{ width: '100%' }} /> </Form.Item>
-            <Form.Item name="price" label="価格 (円)" rules={[{ required: true, message: '価格を入力してください' }]}> <InputNumber min={0} style={{ width: '100%' }} /> </Form.Item>
-          </Form>
-        )}
+        <Form form={form} layout="vertical">
+          <Form.Item name="orderId" label="発注ID" rules={[{ required: true, message: '発注IDを入力してください' }]}> <Input /> </Form.Item>
+          <Form.Item name="name" label="発注名" rules={[{ required: true, message: '発注名を入力してください' }]}> <Input /> </Form.Item>
+          <Form.Item name="quantity" label="数量" rules={[{ required: true, message: '数量を入力してください' }]}> <InputNumber min={0} style={{ width: '100%' }} /> </Form.Item>
+          <Form.Item name="date" label="発注日" rules={[{ required: true, message: '発注日を入力してください' }]}> <DatePicker style={{ width: '100%' }} /> </Form.Item>
+          <Form.Item name="status" label="ステータス" rules={[{ required: true, message: 'ステータスを選択してください' }]}> <Input /> </Form.Item>
+        </Form>
       </Modal>
-      <Modal
-        title="在庫詳細"
-        open={isViewModalOpen}
-        onCancel={() => setIsViewModalOpen(false)}
-        footer={null}
-        width={400}
-      >
-        {viewItem && (
-          <Descriptions column={1} bordered size="middle" labelStyle={{ color: '#888', fontWeight: 500, width: 120 }} contentStyle={{ fontWeight: 600, background: '#f6f8fa' }}>
-            <Descriptions.Item label="ID">{viewItem.key}</Descriptions.Item>
-            <Descriptions.Item label="商品名">{viewItem.name}</Descriptions.Item>
-            <Descriptions.Item label="在庫数">{viewItem.stock}</Descriptions.Item>
-            <Descriptions.Item label="価格 (円)">{viewItem.price.toLocaleString()}</Descriptions.Item>
-          </Descriptions>
-        )}
-      </Modal>
-    </Card>
+      {renderViewModal()}
+    </>
   );
 };
 
