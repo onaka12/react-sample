@@ -62,10 +62,10 @@ const AppLayout: React.FC = () => {
             注文一覧
           </Menu.Item>
           <Menu.Item key="inventory" icon={<UnorderedListOutlined />}>
-            発注一覧
+            在庫一覧
           </Menu.Item>
           <Menu.Item key="inventory-detail" icon={<UnorderedListOutlined />}>
-            発注詳細
+            在庫詳細
           </Menu.Item>
           <Menu.Item key="settings" icon={<SettingOutlined />}>
             設定
