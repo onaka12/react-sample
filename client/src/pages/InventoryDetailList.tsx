@@ -32,6 +32,8 @@ const InventoryDetailList: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [form] = Form.useForm();
+  const [registerCount, setRegisterCount] = useState(1);
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -51,8 +53,36 @@ const InventoryDetailList: React.FC = () => {
   };
   const handleModalOk = () => {
     form.validateFields().then(values => {
-      setData(prev => prev.map(item => item.key === editingItem.key ? { ...editingItem, ...values } : item));
+      if (editingItem) {
+        setData(prev => prev.map(item => item.key === editingItem.key ? { ...editingItem, ...values } : item));
+      } else {
+        const maxDetailNo = data.reduce((max, item) => Math.max(max, Number(item.detailNo)), 0);
+        const newRows = Array.from({ length: registerCount }).map((_, i) => ({
+          ...values,
+          detailNo: (maxDetailNo + i + 1).toString().padStart(4, '0'),
+          key: `${values.orderNo}-${(maxDetailNo + i + 1).toString().padStart(4, '0')}`,
+          stockStatus: '未入庫',
+        }));
+        setData(prev => [...prev, ...newRows]);
+      }
       setIsModalOpen(false);
+    });
+  };
+
+  // 一括入庫
+  const handleBulkStock = () => {
+    Modal.confirm({
+      title: `選択した${selectedRowKeys.length}件を入庫済にしますか？`,
+      okText: 'はい',
+      cancelText: 'いいえ',
+      onOk: () => {
+        setData(prev => prev.map(item =>
+          selectedRowKeys.includes(item.key)
+            ? { ...item, stockStatus: '入庫済' }
+            : item
+        ));
+        setSelectedRowKeys([]);
+      },
     });
   };
   const menu = (record: any) => (
@@ -95,9 +125,23 @@ const InventoryDetailList: React.FC = () => {
     },
   ];
 
+  // 登録モーダル
+  const handleAdd = () => {
+    setEditingItem(null);
+    setRegisterCount(1);
+    form.resetFields();
+    setIsModalOpen(true);
+  };
+
   return (
     <Card style={{ borderRadius: 12, boxShadow: '0 2px 8px #f0f1f2', margin: 24, background: '#fff' }}>
       <Title level={4} style={{ marginBottom: 24 }}>在庫詳細</Title>
+      <Button type="primary" style={{ marginBottom: 16 }} onClick={handleAdd}>登録</Button>
+      {selectedRowKeys.length > 0 && (
+        <Button type="primary" style={{ marginBottom: 12, marginLeft: 8 }} onClick={handleBulkStock}>
+          選択した{selectedRowKeys.length}件を入庫する
+        </Button>
+      )}
       <Card style={{ marginBottom: 16, borderRadius: 8, boxShadow: '0 1px 4px #e0e0e0', background: '#fafbfc' }} bodyStyle={{ padding: 16 }}>
         <Space wrap align="center">
           <Input
@@ -136,6 +180,7 @@ const InventoryDetailList: React.FC = () => {
             cell: (props: any) => <td {...props} style={{ ...props.style, whiteSpace: 'nowrap' }} />,
           },
         }}
+        rowSelection={{ selectedRowKeys, onChange: setSelectedRowKeys }}
       />
       <Modal
         title={editingItem ? '在庫詳細編集' : '在庫詳細登録'}
@@ -147,11 +192,17 @@ const InventoryDetailList: React.FC = () => {
       >
         <Form form={form} layout="vertical">
           <Form.Item name="orderNo" label="発注番号" rules={[{ required: true, message: '発注番号を入力してください' }]}> <Input /> </Form.Item>
-          <Form.Item name="detailNo" label="明細番号" rules={[{ required: true, message: '明細番号を入力してください' }]}> <Input /> </Form.Item>
+          {editingItem && (
+            <Form.Item name="detailNo" label="明細番号" rules={[{ required: true, message: '明細番号を入力してください' }]}> <Input /> </Form.Item>
+          )}
+          {!editingItem && (
+            <Form.Item label="登録数" required>
+              <Input type="number" min={1} value={registerCount} onChange={e => setRegisterCount(Number(e.target.value) || 1)} />
+            </Form.Item>
+          )}
           <Form.Item name="modelNo" label="型番" rules={[{ required: true, message: '型番を入力してください' }]}> <Input /> </Form.Item>
           <Form.Item name="branchNo" label="枝番" rules={[{ required: true, message: '枝番を入力してください' }]}> <Input /> </Form.Item>
           <Form.Item name="deliveryPlace" label="納品先" rules={[{ required: true, message: '納品先を入力してください' }]}> <Input /> </Form.Item>
-          <Form.Item name="stockStatus" label="入庫状況" rules={[{ required: true, message: '入庫状況を入力してください' }]}> <Input /> </Form.Item>
           <Form.Item name="costUnitPrice" label="原価単価" rules={[{ required: true, message: '原価単価を入力してください' }]}> <Input /> </Form.Item>
         </Form>
       </Modal>
