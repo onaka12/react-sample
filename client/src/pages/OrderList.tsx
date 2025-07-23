@@ -742,16 +742,11 @@ const OrderList: React.FC = () => {
     setIsViewModalOpen(true);
   };
 
+  // ドットメニュー
   const menu = (record: OrderItem) => (
     <Menu>
       <Menu.Item key="view" onClick={() => handleView(record)}>
-        参照
-      </Menu.Item>
-      <Menu.Item key="edit" onClick={() => handleEdit(record)}>
-        編集
-      </Menu.Item>
-      <Menu.Item key="delete" onClick={() => handleDelete(record.key)} danger>
-        削除
+        詳細
       </Menu.Item>
     </Menu>
   );
@@ -986,13 +981,7 @@ const OrderList: React.FC = () => {
         const menu = (
           <Menu>
             <Menu.Item key="view" icon={<EyeOutlined />} onClick={() => handleView(record)}>
-              参照
-            </Menu.Item>
-            <Menu.Item key="edit" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
-              編集
-            </Menu.Item>
-            <Menu.Item key="delete" icon={<DeleteOutlined />} danger onClick={() => handleDelete(record.key)}>
-              削除
+              詳細
             </Menu.Item>
           </Menu>
         );
@@ -1004,6 +993,40 @@ const OrderList: React.FC = () => {
       },
     },
   ];
+
+  // 一括操作ボタン
+  const handleBulkAccept = () => {
+    Modal.confirm({
+      title: `選択した${selectedRowKeys.length}件を応諾予約しますか？`,
+      okText: 'はい',
+      cancelText: 'いいえ',
+      onOk: () => {
+        setData(prev => prev.map(item =>
+          selectedRowKeys.includes(item.key)
+            ? { ...item, status: '応諾予約' }
+            : item
+        ));
+        setSelectedRowKeys([]);
+        setCurrentPage(1);
+      },
+    });
+  };
+  const handleBulkCancel = () => {
+    Modal.confirm({
+      title: `選択した${selectedRowKeys.length}件の応諾予約をキャンセルしますか？`,
+      okText: 'はい',
+      cancelText: 'いいえ',
+      onOk: () => {
+        setData(prev => prev.map(item =>
+          selectedRowKeys.includes(item.key)
+            ? { ...item, status: '未応諾' }
+            : item
+        ));
+        setSelectedRowKeys([]);
+        setCurrentPage(1);
+      },
+    });
+  };
 
   return (
     <Card style={{ borderRadius: 12, boxShadow: '0 2px 8px #f0f1f2', margin: 24, background: '#fff' }}>
@@ -1073,24 +1096,14 @@ const OrderList: React.FC = () => {
       </Card>
       {/* 一括操作ボタン */}
       {selectedRowKeys.length > 0 && (
-        <Button type="primary" style={{ marginBottom: 12 }} onClick={() => {
-          Modal.confirm({
-            title: `選択した${selectedRowKeys.length}件を応諾しますか？`,
-            okText: 'はい',
-            cancelText: 'いいえ',
-            onOk: () => {
-              setData(prev => prev.map(item =>
-                selectedRowKeys.includes(item.key)
-                  ? { ...item, status: '応諾済み' }
-                  : item
-              ));
-              setSelectedRowKeys([]);
-              setCurrentPage(1);
-            },
-          });
-        }}>
-          選択した{selectedRowKeys.length}件を応諾
-        </Button>
+        <div style={{ marginBottom: 12, display: 'flex', gap: 8 }}>
+          <Button type="primary" onClick={handleBulkAccept}>
+            選択した{selectedRowKeys.length}件を応諾予約
+          </Button>
+          <Button danger onClick={handleBulkCancel}>
+            選択した{selectedRowKeys.length}件を応諾予約キャンセル
+          </Button>
+        </div>
       )}
       <Table
         columns={columns}
